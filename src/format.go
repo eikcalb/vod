@@ -2,6 +2,9 @@ package vod
 
 import (
 	"errors"
+	"log"
+	"net/http"
+	"strings"
 )
 
 // Dimension describes the length and height of image or video.
@@ -63,4 +66,18 @@ func (d Dimension) FindNearestNext(cur int) (int, error) {
 		return STOP, errors.New("No more size available")
 	}
 	return nextVal, nil
+}
+
+// IsVideo checks if the provided file header is a video
+func IsVideo(data []byte) bool {
+	detectedType := http.DetectContentType(data)
+	log.Printf("detected file type is %s", detectedType)
+	if strings.EqualFold(detectedType, "application/octet-stream") {
+		// If the type is undetecteable, return false
+		return false
+	} else if strings.HasPrefix(detectedType, "video") {
+		return true
+	} else {
+		return false
+	}
 }

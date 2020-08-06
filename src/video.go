@@ -153,26 +153,35 @@ func GetDimension(videoFile string) (*Dimension, error) {
 	}
 
 	outString := out.String()
-	data := strings.Split(outString, "x")
+	data := strings.Split(strings.Trim(outString, " \n"), "x")
 	x, _ := strconv.Atoi(data[0])
 	y, _ := strconv.Atoi(data[1])
-	result := Dimension{x, y}
+	result := Dimension{width: x, height: y}
 	return &result, nil
 }
 
 func processVideoInput(input *os.File) error {
-	d, err := GetDimension(input.Name())
+	// Get the current video dimension in order to calculate resizing
+	dimen, err := GetDimension(input.Name())
 	if err != nil {
 		return err
 	}
 
+	if dimen.height <= 10 || dimen.width <= 10 {
+		return errors.New("Input file has invalid resolution")
+	}
+	nextIndex, err := dimen.FindNearestNext(0)
+	if err != nil {
+		return err
+	}
+	d := VideoSizes[fmt.Sprintf("%s%s", strconv.Itoa(VideoArray[nextIndex]), "p")]
+	log.Printf("old dimension is %v.\nnew destination dimension is %v", dimen, d)
 	cmd := exec.Command("ffmpeg",
 		"-i", "pipe:0",
 		"-format", "mp4",
 		"-vf", fmt.Sprintf("scale=%s:%s:force_original_aspect_ratio:decrease", strconv.Itoa(d.width), strconv.Itoa(d.height)),
 		"pipe:1",
 	)
-	log.Printf("ffprobe output: %s", d)
 
 	// This will create a new video and the output can be utilized for any storage medium.
 	// This should be done within a loop
@@ -199,8 +208,8 @@ func processThumbnail(input *os.File, d Dimension, time string) {
 func CreateVideoServer(r *gin.Engine, config *Configuration) *gin.RouterGroup {
 	g := r.Group("/video")
 	g.POST("/file", func(c *gin.Context) {
-		c.Request.ParseMultipartForm(config.MaxUploadSize)
-		rawFile, header, err := c.Request.FormFile("upload")
+		//c.Request.ParseMultipartForm(config.MaxUploadSize)
+		rawFile, _, err := c.Request.FormFile("upload")
 		if err != nil {
 			log.Printf(err.Error())
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to read uploaded data"})
@@ -212,9 +221,21 @@ func CreateVideoServer(r *gin.Engine, config *Configuration) *gin.RouterGroup {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to read uploaded data"})
 			return
 		}
+		defer file.Close()
 		defer os.Remove(file.Name())
 
-		log.Printf("new video file %s", header.Filename)
+		buf := bufio.NewReaderSize(file, 600)
+		head, err := buf.Peek(512)
+		if ok := filetype.IsVideo(head); err != nil || (!ok && !IsVideo(head)) {
+			if err != nil {
+				log.Printf(err.Error())
+			} else {
+				log.Printf("Not a video file")
+			}
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to validate stream"})
+			return
+		}
+
 		processVideoInput(file)
 
 	})
@@ -227,15 +248,19 @@ func CreateVideoServer(r *gin.Engine, config *Configuration) *gin.RouterGroup {
 		//	c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to read uploaded data"})
 		//	return
 		//}
-		buf := bufio.NewReaderSize(reader, 400)
-		head, err := buf.Peek(300)
+		buf := bufio.NewReaderSize(reader, 600)
+		head, err := buf.Peek(512)
 
-		if ok := filetype.IsVideo(head); err != nil || !ok {
-			log.Printf(err.Error())
+		if ok := filetype.IsVideo(head); err != nil || (!ok && !IsVideo(head)) {
+			if err != nil {
+				log.Printf(err.Error())
+			} else {
+				log.Printf("Not a video file")
+			}
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to validate stream"})
 			return
 		}
-
+		// Save incoming file
 		newFile, err := ioutil.TempFile("", "upload-*")
 		if err != nil {
 			log.Printf(err.Error())
@@ -243,11 +268,12 @@ func CreateVideoServer(r *gin.Engine, config *Configuration) *gin.RouterGroup {
 			return
 		}
 		defer newFile.Close()
-		defer reader.Close()
 		defer os.Remove(newFile.Name())
 
 		// Write the current data to filesystem
 		_, err = buf.WriteTo(newFile)
+		reader.Close()
+
 		if err != nil {
 			log.Printf(err.Error())
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Cannot proceed with processing due to internal error"})
