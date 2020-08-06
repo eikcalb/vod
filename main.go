@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	vod "eikcalb.dev/vod/src"
@@ -38,9 +39,10 @@ func main() {
 	r := SetupRouter(config)
 
 	// Register middleware routers
-	vod.CreateVideoServer(r)
-	for key, val := range vod.VideoSizes {
-		fmt.Println(key, val)
+	vod.CreateVideoServer(r, config)
+
+	err = r.Run(fmt.Sprintf("%s:%s", config.Listen.Host, strconv.Itoa(config.Listen.Port)))
+	if err != nil {
+		log.Fatal(err)
 	}
-	//r.Run(fmt.Sprintf("%s:%s", config.Listen.Host, strconv.Itoa(config.Listen.Port)))
 }
