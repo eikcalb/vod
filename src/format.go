@@ -5,6 +5,8 @@ import (
 	"log"
 	"net/http"
 	"strings"
+
+	"github.com/google/uuid"
 )
 
 // Dimension describes the length and height of image or video.
@@ -69,15 +71,19 @@ func (d Dimension) FindNearestNext(cur int) (int, error) {
 }
 
 // IsVideo checks if the provided file header is a video
-func IsVideo(data []byte) bool {
+func IsVideo(data []byte) (bool, string) {
 	detectedType := http.DetectContentType(data)
 	log.Printf("detected file type is %s", detectedType)
 	if strings.EqualFold(detectedType, "application/octet-stream") {
 		// If the type is undetecteable, return false
-		return false
+		return false, detectedType
 	} else if strings.HasPrefix(detectedType, "video") {
-		return true
+		return true, detectedType
 	} else {
-		return false
+		return false, detectedType
 	}
+}
+
+func getFilePath() string {
+	return "video/resize/" + uuid.New().String()
 }

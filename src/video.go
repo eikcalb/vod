@@ -35,7 +35,7 @@ func VideoResizeCommand(cmd *exec.Cmd, input io.Reader, output io.Writer) error 
 // ThumbnailCommand generates thumbnail from video input and sets it to the output reader.
 func ThumbnailCommand(cmd *exec.Cmd, input io.Reader, output io.Writer) error {
 	cmd.Stdin = input
-	cmd.Stderr = output
+	cmd.Stdout = output
 	err := cmd.Run()
 	if err != nil {
 		log.Printf("%s %v", err.Error(), output)
@@ -79,7 +79,7 @@ func GetDimension(video io.Reader) (*Dimension, error) {
 }
 
 // ProcessVideoInput processes the video input
-func ProcessVideoInput(input *os.File) error {
+func ProcessVideoInput(input *os.File, contentType string) error {
 	// Before processing file, move reader to begining to avoid errors
 	input.Seek(0, 0)
 
@@ -89,6 +89,7 @@ func ProcessVideoInput(input *os.File) error {
 		return err
 	}
 
+	destinationRoot := getFilePath()
 	var output1080 bytes.Buffer
 	var output720 bytes.Buffer
 	var outputThumb bytes.Buffer
@@ -111,6 +112,11 @@ func ProcessVideoInput(input *os.File) error {
 			log.Println("File processing failed!")
 			return nil
 		}
+		err = completeRequest(&output1080, contentType, destinationRoot+"/1080")
+		if err != nil {
+			log.Println("File processing failed for 1080 video!")
+			return err
+		}
 	}
 
 	// Check if the file is larger than 720p
@@ -122,11 +128,21 @@ func ProcessVideoInput(input *os.File) error {
 			log.Println("File processing failed!")
 			return err
 		}
+		err = completeRequest(&output720, contentType, destinationRoot+"/720")
+		if err != nil {
+			log.Println("File processing failed for 720 video!")
+			return err
+		}
 	}
 
 	input.Seek(0, 0)
 	err = generateThumbnail(input, &outputThumb, "00:00:03")
 	if err != nil {
+		return err
+	}
+	err = completeRequest(&outputThumb, http.DetectContentType(outputThumb.Bytes()), destinationRoot+"/thumb")
+	if err != nil {
+		log.Println("File processing failed for image!")
 		return err
 	}
 
@@ -175,7 +191,8 @@ func CreateVideoServer(r *gin.Engine, config *Configuration) *gin.RouterGroup {
 
 		buf := bufio.NewReaderSize(file, 600)
 		head, err := buf.Peek(512)
-		if ok := filetype.IsVideo(head); err != nil || (!ok && !IsVideo(head)) {
+		isVideoType, contentType := IsVideo(head)
+		if err != nil || (!filetype.IsVideo(head) && !isVideoType) {
 			if err != nil {
 				log.Printf(err.Error())
 			} else {
@@ -185,7 +202,7 @@ func CreateVideoServer(r *gin.Engine, config *Configuration) *gin.RouterGroup {
 			return
 		}
 
-		err = ProcessVideoInput(file)
+		err = ProcessVideoInput(file, contentType)
 		if err != nil {
 			log.Printf(err.Error())
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Cannot proceed with processing due to internal error"})
@@ -201,8 +218,8 @@ func CreateVideoServer(r *gin.Engine, config *Configuration) *gin.RouterGroup {
 		reader := c.Request.Body
 		buf := bufio.NewReaderSize(reader, 600)
 		head, err := buf.Peek(512)
-
-		if ok := filetype.IsVideo(head); err != nil || (!ok && !IsVideo(head)) {
+		isVideoType, contentType := IsVideo(head)
+		if err != nil || (!filetype.IsVideo(head) && !isVideoType) {
 			if err != nil {
 				log.Printf(err.Error())
 			} else {
@@ -230,7 +247,7 @@ func CreateVideoServer(r *gin.Engine, config *Configuration) *gin.RouterGroup {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Cannot proceed with processing due to internal error"})
 			return
 		}
-		err = ProcessVideoInput(newFile)
+		err = ProcessVideoInput(newFile, contentType)
 		if err != nil {
 			log.Printf(err.Error())
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Cannot proceed with processing due to internal error"})

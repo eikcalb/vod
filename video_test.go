@@ -15,7 +15,7 @@ func TestVideoResize(t *testing.T) {
 	if err != nil {
 		t.Error(err.Error())
 	}
-	err = vod.ProcessVideoInput(file)
+	err = vod.ProcessVideoInput(file, "")
 	if err != nil {
 		t.Error(err.Error())
 	} else {
