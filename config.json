@@ -3,8 +3,8 @@
     "description": "Media processing application built with golang",
     "serverMode":"release",
     "listen":{
-        "host":"localhost",
-        "port":8080
+        "host":"",
+        "port":80
     },
     "maxUploadSize": 104857600,
     "aws":{

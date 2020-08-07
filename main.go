@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -32,14 +30,7 @@ func SetupRouter(config *vod.Configuration) *gin.Engine {
 }
 
 func main() {
-	path, err := filepath.Abs("config.json")
-	if err != nil {
-		log.Fatal("Cannot continue with application", err)
-		os.Exit(1)
-	}
-	config := vod.LoadConfig(path)
-
-	r := SetupRouter(config)
+	r := SetupRouter(vod.Config)
 
 	// Register middleware routers
 	vod.CreateVideoServer(r, config)

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"os"
+	"path/filepath"
 )
 
 // Configuration describes the configuration settings acceptable by the application.
@@ -23,6 +24,11 @@ type Configuration struct {
 		AWS_SESSION_TOKEN     string
 	}
 }
+
+var (
+	// Config contains the application configuration
+	Config *Configuration
+)
 
 // LoadConfig loads configuration file for use within the application.
 func LoadConfig(path string) *Configuration {
@@ -44,4 +50,13 @@ func LoadConfig(path string) *Configuration {
 		panic("Cannot continue without config file")
 	}
 	return Config
+}
+
+func init() {
+	path, err := filepath.Abs("../config.json")
+	if err != nil {
+		log.Fatal("Cannot continue with application", err)
+		os.Exit(1)
+	}
+	Config = LoadConfig(path)
 }

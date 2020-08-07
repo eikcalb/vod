@@ -58,7 +58,6 @@ func GetDimension(video io.Reader) (*Dimension, error) {
 	out := new(strings.Builder)
 	cmd.Stdin = video
 	cmd.Stdout = out
-	log.Printf("%v", video)
 	err := cmd.Run()
 	if err != nil {
 		log.Printf(err.Error())
@@ -93,12 +92,6 @@ func ProcessVideoInput(input *os.File, contentType string) error {
 	var output1080 bytes.Buffer
 	var output720 bytes.Buffer
 	var outputThumb bytes.Buffer
-
-	//nextIndex, err := dimen.FindNearestNext(0)
-	//if err != nil {
-	//	return err
-	//}
-	//d := VideoSizes[fmt.Sprintf("%s%s", strconv.Itoa(VideoArray[nextIndex]), "p")]
 
 	// Current design is to have 1080p and 720p resolutions available
 	// First check video size before resizing
@@ -229,7 +222,7 @@ func CreateVideoServer(r *gin.Engine, config *Configuration) *gin.RouterGroup {
 			return
 		}
 		// Save incoming file
-		newFile, err := ioutil.TempFile("/Users/oagwa/Documents/dev/vod", "upload-*")
+		newFile, err := ioutil.TempFile("", "upload-*")
 		if err != nil {
 			log.Printf(err.Error())
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Cannot proceed with processing due to internal error"})

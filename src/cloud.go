@@ -3,6 +3,7 @@ package vod
 import (
 	"io"
 	"log"
+	"os"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
@@ -11,7 +12,8 @@ import (
 )
 
 func completeRequest(data io.Reader, contentType string, path string) error {
-	creds := credentials.NewEnvCredentials()
+	log.Printf("configuration is %v", Config)
+	creds := credentials.NewStaticCredentials(os.Getenv(Config.AWS.AWS_ACCESS_KEY_ID), os.Getenv(Config.AWS.AWS_SECRET_ACCESS_KEY), "")
 	log.Println("Start write to AWS")
 
 	config := &aws.Config{
