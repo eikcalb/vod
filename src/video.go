@@ -18,113 +18,44 @@ import (
 	"github.com/h2non/filetype"
 )
 
-const INVALID_SIZE = iota
-
 // VideoResizeCommand resizes the video provided and writes the new file to the filesystem
 // TODO: send output to write stream
-func VideoResizeCommand(cmd *exec.Cmd, input io.ReadCloser, output io.Writer) (int64, error) {
-	// stdin for process invoked
-	pipe, err := cmd.StdinPipe()
+func VideoResizeCommand(cmd *exec.Cmd, input io.Reader, output io.Writer) error {
+	cmd.Stdin = input
+	cmd.Stdout = output
+	err := cmd.Run()
 	if err != nil {
-		log.Panic(err)
-		return INVALID_SIZE, errors.New("Failed to read data from stream for video processing")
+		log.Printf("%s", err.Error())
+		return errors.New("Failed to start video resize process")
 	}
 
-	// stdout for process invoked
-	stdout, err := cmd.StdoutPipe()
-	if err != nil {
-		log.Panic(err)
-		return INVALID_SIZE, errors.New("Failed to write data from stream for video processing")
-	}
-
-	err = cmd.Start()
-	if err != nil {
-		log.Printf(err.Error())
-		return INVALID_SIZE, errors.New("Failed to start video resize process")
-	}
-
-	defer pipe.Close()
-	defer stdout.Close()
-
-	// Copy data from input to the running process
-	_, err = io.Copy(pipe, input)
-
-	if err != nil {
-		log.Printf(err.Error())
-		return INVALID_SIZE, errors.New("Failed to copy file to stream")
-	}
-
-	// Copy data from process output
-	size, err := io.Copy(output, stdout)
-
-	if err != nil {
-		log.Printf(err.Error())
-		return INVALID_SIZE, errors.New("Failed to copy file from stream")
-	}
-
-	err = cmd.Wait()
-	if err != nil {
-		log.Printf(err.Error())
-		return INVALID_SIZE, errors.New("Error occurred while running process")
-	}
-
-	return size, nil
+	return nil
 }
 
 // ThumbnailCommand generates thumbnail from video input and sets it to the output reader.
-func ThumbnailCommand(cmd *exec.Cmd, input io.ReadCloser, output io.Writer) (int64, error) {
-	pipe, err := cmd.StdinPipe()
-	if err != nil {
-		log.Panic(err)
-		return INVALID_SIZE, errors.New("Failed to read data from stream for thumbnail generation")
-	}
-	stdout, err := cmd.StdoutPipe()
-	if err != nil {
-		log.Panic(err)
-		return INVALID_SIZE, errors.New("Failed to write data from stream for thumbnail generation")
-	}
-
-	err = cmd.Start()
+func ThumbnailCommand(cmd *exec.Cmd, input io.ReadCloser, output io.Writer) error {
+	cmd.Stdin = input
+	cmd.Stdout = output
+	err := cmd.Run()
 	if err != nil {
 		log.Printf(err.Error())
-		return INVALID_SIZE, errors.New("Failed to start thumbnail process")
+		return errors.New("Failed to start thumbnail process")
 	}
 
-	defer pipe.Close()
-	defer stdout.Close()
-
-	_, err = io.Copy(pipe, input)
-
-	if err != nil {
-		log.Printf(err.Error())
-		return INVALID_SIZE, errors.New("Failed to copy file to stream")
-	}
-	size, err := io.Copy(output, stdout)
-
-	if err != nil {
-		log.Printf(err.Error())
-		return INVALID_SIZE, errors.New("Failed to copy file from stream")
-	}
-
-	err = cmd.Wait()
-	if err != nil {
-		log.Printf(err.Error())
-		return INVALID_SIZE, errors.New("Error occurred while running process")
-	}
-
-	return size, nil
+	return nil
 }
 
 // GetDimension returns the dimension of video from stream
-func GetDimension(videoFile string) (*Dimension, error) {
+func GetDimension(video io.Reader) (*Dimension, error) {
 	cmd := exec.Command("ffprobe",
-		"-i", videoFile,
+		"-i", "pipe:0",
 		"-v", "error",
 		"-select_streams", "v:0",
 		"-show_entries", "stream=width,height",
 		"-of", "csv=s=x:p=0",
 	)
 
+	cmd.Stdin = video
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		log.Printf(err.Error())
@@ -149,7 +80,7 @@ func GetDimension(videoFile string) (*Dimension, error) {
 	err = cmd.Wait()
 	if err != nil {
 		log.Printf(err.Error())
-		return nil, errors.New("Error occurred while running thumbnail process")
+		return nil, errors.New("Error occurred while extracting dimension")
 	}
 
 	outString := out.String()
@@ -157,37 +88,57 @@ func GetDimension(videoFile string) (*Dimension, error) {
 	x, _ := strconv.Atoi(data[0])
 	y, _ := strconv.Atoi(data[1])
 	result := Dimension{width: x, height: y}
+
+	if result.height <= 10 || result.width <= 10 {
+		return nil, errors.New("Input file has invalid resolution")
+	}
+
 	return &result, nil
 }
 
-func processVideoInput(input *os.File) error {
+// ProcessVideoInput processes the video input
+func ProcessVideoInput(input *os.File) error {
 	// Get the current video dimension in order to calculate resizing
-	dimen, err := GetDimension(input.Name())
+	dimen, err := GetDimension(input)
 	if err != nil {
 		return err
 	}
 
-	if dimen.height <= 10 || dimen.width <= 10 {
-		return errors.New("Input file has invalid resolution")
-	}
 	nextIndex, err := dimen.FindNearestNext(0)
 	if err != nil {
 		return err
 	}
+
+	input.Seek(0, 0)
 	d := VideoSizes[fmt.Sprintf("%s%s", strconv.Itoa(VideoArray[nextIndex]), "p")]
-	log.Printf("old dimension is %v.\nnew destination dimension is %v", dimen, d)
-	cmd := exec.Command("ffmpeg",
-		"-i", "pipe:0",
-		"-format", "mp4",
-		"-vf", fmt.Sprintf("scale=%s:%s:force_original_aspect_ratio:decrease", strconv.Itoa(d.width), strconv.Itoa(d.height)),
-		"pipe:1",
-	)
+	log.Printf("\n\nold dimension is %v\nnew destination dimension is %v\n\n", dimen, d)
 
 	// This will create a new video and the output can be utilized for any storage medium.
 	// This should be done within a loop
 	var outputVideo bytes.Buffer
-	VideoResizeCommand(cmd, input, &outputVideo)
-	return err
+	if err != nil {
+		log.Printf(err.Error())
+	}
+
+	cmd := exec.Command("ffmpeg",
+		"-i", "pipe:0",
+		"-movflags", "frag_keyframe+empty_moov", "-f", "mp4",
+		"-vf", fmt.Sprintf("scale=%s:%s:force_original_aspect_ratio=decrease", strconv.Itoa(d.width), strconv.Itoa(d.height)),
+		"pipe:1",
+	)
+
+	err = VideoResizeCommand(cmd, input, &outputVideo)
+	if err != nil {
+		log.Println(err.Error())
+		return err
+	}
+	err = ioutil.WriteFile("test.mp4", outputVideo.Bytes(), 0777)
+	if err != nil {
+		log.Println("File processing failed!")
+	}
+
+	log.Println("File processed successfully!")
+	return nil
 }
 
 func processThumbnail(input *os.File, d Dimension, time string) {
@@ -236,18 +187,13 @@ func CreateVideoServer(r *gin.Engine, config *Configuration) *gin.RouterGroup {
 			return
 		}
 
-		processVideoInput(file)
+		ProcessVideoInput(file)
 
 	})
 
 	g.POST("/stream", func(c *gin.Context) {
 		// Get uploaded file
 		reader := c.Request.Body
-		//if err != nil {
-		//	log.Printf(err.Error())
-		//	c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to read uploaded data"})
-		//	return
-		//}
 		buf := bufio.NewReaderSize(reader, 600)
 		head, err := buf.Peek(512)
 
@@ -261,7 +207,7 @@ func CreateVideoServer(r *gin.Engine, config *Configuration) *gin.RouterGroup {
 			return
 		}
 		// Save incoming file
-		newFile, err := ioutil.TempFile("", "upload-*")
+		newFile, err := ioutil.TempFile("/Users/oagwa/Documents/dev/vod", "upload-*")
 		if err != nil {
 			log.Printf(err.Error())
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Cannot proceed with processing due to internal error"})
@@ -272,17 +218,19 @@ func CreateVideoServer(r *gin.Engine, config *Configuration) *gin.RouterGroup {
 
 		// Write the current data to filesystem
 		_, err = buf.WriteTo(newFile)
-		reader.Close()
+		defer reader.Close()
 
 		if err != nil {
 			log.Printf(err.Error())
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Cannot proceed with processing due to internal error"})
+			return
 		}
 
-		err = processVideoInput(newFile)
+		err = ProcessVideoInput(newFile)
 		if err != nil {
 			log.Printf(err.Error())
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Cannot proceed with processing due to internal error"})
+			return
 		}
 	})
 
