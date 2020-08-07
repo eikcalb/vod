@@ -55,29 +55,11 @@ func GetDimension(video io.Reader) (*Dimension, error) {
 		"-of", "csv=s=x:p=0",
 	)
 
+	out := new(strings.Builder)
 	cmd.Stdin = video
-	stdout, err := cmd.StdoutPipe()
-	if err != nil {
-		log.Printf(err.Error())
-		return nil, errors.New("Failed to write data from stream for thumbnail generation")
-	}
-
-	err = cmd.Start()
-	if err != nil {
-		log.Printf(err.Error())
-		return nil, errors.New("Failed to start thumbnail process")
-	}
-
-	defer stdout.Close()
-
-	var out strings.Builder
-	_, err = io.Copy(&out, stdout)
-	if err != nil {
-		log.Printf(err.Error())
-		return nil, errors.New("Failed to copy file from stream")
-	}
-
-	err = cmd.Wait()
+	cmd.Stdout = out
+	log.Printf("%v", video)
+	err := cmd.Run()
 	if err != nil {
 		log.Printf(err.Error())
 		return nil, errors.New("Error occurred while extracting dimension")
@@ -98,6 +80,9 @@ func GetDimension(video io.Reader) (*Dimension, error) {
 
 // ProcessVideoInput processes the video input
 func ProcessVideoInput(input *os.File) error {
+	// Before processing file, move reader to begining to avoid errors
+	input.Seek(0, 0)
+
 	// Get the current video dimension in order to calculate resizing
 	dimen, err := GetDimension(input)
 	if err != nil {
@@ -109,13 +94,14 @@ func ProcessVideoInput(input *os.File) error {
 		return err
 	}
 
+	// After dimension read, move file reader to beginning once more
 	input.Seek(0, 0)
+
 	d := VideoSizes[fmt.Sprintf("%s%s", strconv.Itoa(VideoArray[nextIndex]), "p")]
-	log.Printf("\n\nold dimension is %v\nnew destination dimension is %v\n\n", dimen, d)
 
 	// This will create a new video and the output can be utilized for any storage medium.
 	// This should be done within a loop
-	var outputVideo bytes.Buffer
+	outputVideo := new(bytes.Buffer)
 	if err != nil {
 		log.Printf(err.Error())
 	}
@@ -127,17 +113,16 @@ func ProcessVideoInput(input *os.File) error {
 		"pipe:1",
 	)
 
-	err = VideoResizeCommand(cmd, input, &outputVideo)
+	err = VideoResizeCommand(cmd, input, outputVideo)
 	if err != nil {
 		log.Println(err.Error())
 		return err
 	}
-	err = ioutil.WriteFile("test.mp4", outputVideo.Bytes(), 0777)
+
 	if err != nil {
 		log.Println("File processing failed!")
 	}
 
-	log.Println("File processed successfully!")
 	return nil
 }
 
@@ -187,7 +172,14 @@ func CreateVideoServer(r *gin.Engine, config *Configuration) *gin.RouterGroup {
 			return
 		}
 
-		ProcessVideoInput(file)
+		err = ProcessVideoInput(file)
+		if err != nil {
+			log.Printf(err.Error())
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Cannot proceed with processing due to internal error"})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{"message": "Successfully processed data"})
 
 	})
 
@@ -225,13 +217,14 @@ func CreateVideoServer(r *gin.Engine, config *Configuration) *gin.RouterGroup {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Cannot proceed with processing due to internal error"})
 			return
 		}
-
 		err = ProcessVideoInput(newFile)
 		if err != nil {
 			log.Printf(err.Error())
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Cannot proceed with processing due to internal error"})
 			return
 		}
+
+		c.JSON(http.StatusOK, gin.H{"message": "Successfully processed data"})
 	})
 
 	return g
