@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"strconv"
@@ -38,7 +39,7 @@ func ThumbnailCommand(cmd *exec.Cmd, input io.Reader, output io.Writer) error {
 	cmd.Stdout = output
 	err := cmd.Run()
 	if err != nil {
-		log.Printf("%s %v", err.Error(), output)
+		log.Printf("%s", err.Error())
 		return errors.New("Failed to start thumbnail process")
 	}
 
@@ -151,7 +152,6 @@ func generateThumbnail(input *os.File, outputThumb io.Writer, time string) error
 		"pipe:1",
 	)
 
-	log.Println(cmd)
 	err := ThumbnailCommand(cmd, input, outputThumb)
 	if err != nil {
 		log.Println(err.Error())
@@ -250,6 +250,54 @@ func CreateVideoServer(r *gin.Engine, config *Configuration) *gin.RouterGroup {
 		c.JSON(http.StatusOK, gin.H{"message": "Successfully processed data"})
 	})
 
+	g.POST("/resize", func(c *gin.Context) {
+		rawURL, exists := c.GetQuery("url")
+		if !exists {
+
+		}
+		sourceURL, err := url.QueryUnescape(rawURL)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Url must be provided"})
+			return
+		}
+		// Save incoming file
+		newFile, err := ioutil.TempFile("", "upload-*")
+		if err != nil {
+			log.Printf(err.Error())
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Cannot proceed with processing due to internal error"})
+			return
+		}
+		defer newFile.Close()
+		defer os.Remove(newFile.Name())
+
+		err = downloadData(sourceURL, newFile)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to parse Url"})
+			return
+		}
+
+		newFile.Seek(0, 0)
+		buf := bufio.NewReaderSize(newFile, 600)
+		head, err := buf.Peek(512)
+		isVideoType, contentType := IsVideo(head)
+		if err != nil || (!filetype.IsVideo(head) && !isVideoType) {
+			if err != nil {
+				log.Printf(err.Error())
+			} else {
+				log.Printf("Not a video file")
+			}
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to validate stream"})
+			return
+		}
+		err = ProcessVideoInput(newFile, contentType)
+		if err != nil {
+			log.Printf(err.Error())
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Cannot proceed with processing due to internal error"})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{"message": "Successfully processed data"})
+	})
 	return g
 }
 
