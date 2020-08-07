@@ -33,10 +33,10 @@ func main() {
 	r := SetupRouter(vod.Config)
 
 	// Register middleware routers
-	vod.CreateVideoServer(r, config)
+	vod.CreateVideoServer(r, vod.Config)
 
-	log.Printf("Starting %s server!", config.AppName)
-	err = r.Run(fmt.Sprintf("%s:%s", config.Listen.Host, strconv.Itoa(config.Listen.Port)))
+	log.Printf("Starting %s server!", vod.Config.AppName)
+	err := r.Run(fmt.Sprintf("%s:%s", vod.Config.Listen.Host, strconv.Itoa(vod.Config.Listen.Port)))
 	if err != nil {
 		log.Fatal(err)
 	}
