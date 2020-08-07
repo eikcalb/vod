@@ -53,10 +53,13 @@ func LoadConfig(path string) *Configuration {
 }
 
 func init() {
-	path, err := filepath.Abs("../config.json")
+	dir, err := os.Getwd()
 	if err != nil {
 		log.Fatal("Cannot continue with application", err)
-		os.Exit(1)
+	}
+	path, err := filepath.Abs(dir + "/config.json")
+	if err != nil {
+		log.Fatal("Cannot continue with application", err)
 	}
 	Config = LoadConfig(path)
 }
