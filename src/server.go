@@ -17,6 +17,11 @@ type Configuration struct {
 	}
 	ServerMode    string `json:"serverMode"`
 	MaxUploadSize int64  `json:"maxUploadSize"`
+	AWS           struct {
+		AWS_ACCESS_KEY_ID     string
+		AWS_SECRET_ACCESS_KEY string
+		AWS_SESSION_TOKEN     string
+	}
 }
 
 // LoadConfig loads configuration file for use within the application.

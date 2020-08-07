@@ -33,12 +33,12 @@ func VideoResizeCommand(cmd *exec.Cmd, input io.Reader, output io.Writer) error 
 }
 
 // ThumbnailCommand generates thumbnail from video input and sets it to the output reader.
-func ThumbnailCommand(cmd *exec.Cmd, input io.ReadCloser, output io.Writer) error {
+func ThumbnailCommand(cmd *exec.Cmd, input io.Reader, output io.Writer) error {
 	cmd.Stdin = input
-	cmd.Stdout = output
+	cmd.Stderr = output
 	err := cmd.Run()
 	if err != nil {
-		log.Printf(err.Error())
+		log.Printf("%s %v", err.Error(), output)
 		return errors.New("Failed to start thumbnail process")
 	}
 
@@ -89,54 +89,67 @@ func ProcessVideoInput(input *os.File) error {
 		return err
 	}
 
-	nextIndex, err := dimen.FindNearestNext(0)
-	if err != nil {
-		return err
+	var output1080 bytes.Buffer
+	var output720 bytes.Buffer
+	var outputThumb bytes.Buffer
+
+	//nextIndex, err := dimen.FindNearestNext(0)
+	//if err != nil {
+	//	return err
+	//}
+	//d := VideoSizes[fmt.Sprintf("%s%s", strconv.Itoa(VideoArray[nextIndex]), "p")]
+
+	// Current design is to have 1080p and 720p resolutions available
+	// First check video size before resizing
+	if dimen.height > 1080 {
+		// Video is larger than 1080, hence proceed to resizing step
+
+		// After dimension read, move file reader to beginning once more
+		input.Seek(0, 0)
+		err = startVideoProcess(input, &output1080, VideoSizes["1080p"])
+		if err != nil {
+			log.Println("File processing failed!")
+			return nil
+		}
 	}
 
-	// After dimension read, move file reader to beginning once more
+	// Check if the file is larger than 720p
+	if dimen.height > 720 {
+		// Move file reader to beginning once more... Not sure what got executed last... Just a precaution
+		input.Seek(0, 0)
+		err = startVideoProcess(input, &output720, VideoSizes["720p"])
+		if err != nil {
+			log.Println("File processing failed!")
+			return err
+		}
+	}
+
 	input.Seek(0, 0)
-
-	d := VideoSizes[fmt.Sprintf("%s%s", strconv.Itoa(VideoArray[nextIndex]), "p")]
-
-	// This will create a new video and the output can be utilized for any storage medium.
-	// This should be done within a loop
-	outputVideo := new(bytes.Buffer)
+	err = generateThumbnail(input, &outputThumb, "00:00:03")
 	if err != nil {
-		log.Printf(err.Error())
-	}
-
-	cmd := exec.Command("ffmpeg",
-		"-i", "pipe:0",
-		"-movflags", "frag_keyframe+empty_moov", "-f", "mp4",
-		"-vf", fmt.Sprintf("scale=%s:%s:force_original_aspect_ratio=decrease", strconv.Itoa(d.width), strconv.Itoa(d.height)),
-		"pipe:1",
-	)
-
-	err = VideoResizeCommand(cmd, input, outputVideo)
-	if err != nil {
-		log.Println(err.Error())
 		return err
-	}
-
-	if err != nil {
-		log.Println("File processing failed!")
 	}
 
 	return nil
 }
 
-func processThumbnail(input *os.File, d Dimension, time string) {
+func generateThumbnail(input *os.File, outputThumb io.Writer, time string) error {
 	cmd := exec.Command("ffmpeg",
 		"-ss", time, "-i", "pipe:0",
 		"-frames:v", "1",
-		"-o", "pipe:1",
-		"-format", "png",
-		"-s", fmt.Sprintf("%sx%s", strconv.Itoa(d.width), strconv.Itoa(d.height)),
+		"-f", "image2",
+		"-vf", fmt.Sprintf("scale=%s:%s:force_original_aspect_ratio=decrease", strconv.Itoa(600), strconv.Itoa(600)),
 		"pipe:1",
 	)
-	var outputThumb bytes.Buffer
-	ThumbnailCommand(cmd, input, &outputThumb)
+
+	log.Println(cmd)
+	err := ThumbnailCommand(cmd, input, outputThumb)
+	if err != nil {
+		log.Println(err.Error())
+		return err
+	}
+
+	return nil
 }
 
 // CreateVideoServer is used to process upload post request.
@@ -228,4 +241,21 @@ func CreateVideoServer(r *gin.Engine, config *Configuration) *gin.RouterGroup {
 	})
 
 	return g
+}
+
+func startVideoProcess(input io.Reader, outputVideo io.Writer, d Dimension) error {
+	cmd := exec.Command("ffmpeg",
+		"-i", "pipe:0",
+		"-movflags", "frag_keyframe+empty_moov", "-f", "mp4",
+		"-vf", fmt.Sprintf("scale=%s:%s:force_original_aspect_ratio=decrease", strconv.Itoa(d.width), strconv.Itoa(d.height)),
+		"pipe:1",
+	)
+
+	err := VideoResizeCommand(cmd, input, outputVideo)
+	if err != nil {
+		log.Println("File processing failed!")
+		return err
+	}
+
+	return nil
 }

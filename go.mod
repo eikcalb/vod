@@ -3,6 +3,7 @@ module eikcalb.dev/vod
 go 1.14
 
 require (
+	github.com/aws/aws-sdk-go v1.33.21
 	github.com/gin-gonic/gin v1.6.3
 	github.com/go-playground/validator/v10 v10.3.0 // indirect
 	github.com/golang/protobuf v1.4.2 // indirect
