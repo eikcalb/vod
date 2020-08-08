@@ -55,7 +55,7 @@ func HandleAWSCatalogue(s3 events.S3Entity) error {
 	inputData := aws.NewWriteAtBuffer([]byte{})
 	err := downloadData(s3.Object.URLDecodedKey, inputData, Config.AWS.CatalogueBucketName)
 	if err != nil {
-		return errors.New("Failed to download file")
+		return err
 	}
 
 	buf := bufio.NewReaderSize(bytes.NewReader(inputData.Bytes()), 600)
@@ -71,8 +71,7 @@ func HandleAWSCatalogue(s3 events.S3Entity) error {
 	var out bytes.Buffer
 	err = ResizeImage(buf, &out, NewDimension(600, 600))
 	if err != nil {
-		log.Printf(err.Error())
-		return errors.New("Cannot proceed with processing due to internal error")
+		return err
 	}
 
 	completeRequest(&out, contentType, getCatalogueFilePath()+"/600.png")

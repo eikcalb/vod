@@ -1,19 +1,19 @@
 {
     "appName": "FindApp - VOD",
     "description": "Media processing application built with golang",
-    "serverMode":"release",
-    "listen":{
-        "host":"",
-        "port":80
+    "serverMode": "release",
+    "listen": {
+        "host": "",
+        "port": 80
     },
     "maxUploadSize": 104857600,
-    "aws":{
- "accessKeyID":"AWS_ACCESS_KEY_ID",
-"accessKeySecret":"AWS_SECRET_ACCESS_KEY",
-"sessionToken":"AWS_SESSION_TOKEN",
-"bucketName":"vod-lambda-output",
-"mediaBucketName":"vod-file-storage",
-"catalogueBucketName":"vod-catalogue-storage",
-"region":"us-east-1"
+    "aws": {
+        "accessKeyID": "AWS_ACCESS_KEY_ID",
+        "accessKeySecret": "AWS_SECRET_ACCESS_KEY",
+        "sessionToken": "AWS_SESSION_TOKEN",
+        "bucketName": "vod-lambda-output-test",
+        "mediaBucketName": "vod-file-storage-test",
+        "catalogueBucketName": "vod-catalogue-storage",
+        "region": "us-east-1"
     }
 }
