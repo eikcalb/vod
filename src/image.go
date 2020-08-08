@@ -3,6 +3,7 @@ package vod
 import (
 	"bufio"
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -11,8 +12,11 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/aws/aws-lambda-go/events"
 	"github.com/gin-gonic/gin"
 	"github.com/h2non/filetype"
+
+	"github.com/aws/aws-sdk-go/aws"
 )
 
 // CreateImageServer creates an image server
@@ -42,8 +46,37 @@ func CreateImageServer(r *gin.Engine) *gin.RouterGroup {
 		completeRequest(&out, contentType, getCatalogueFilePath()+"/600")
 		c.JSON(http.StatusOK, gin.H{"message": "Successfully processed data"})
 	})
-	log.Print(g)
+
 	return g
+}
+
+// HandleAWSCatalogue is called in lambda upon activity in a lambda
+func HandleAWSCatalogue(s3 events.S3Entity) error {
+	inputData := aws.NewWriteAtBuffer([]byte{})
+	err := downloadData(s3.Object.URLDecodedKey, inputData, "vod-catalogue")
+	if err != nil {
+		return errors.New("Failed to download file")
+	}
+
+	buf := bufio.NewReaderSize(bytes.NewReader(inputData.Bytes()), 600)
+	head, err := buf.Peek(512)
+	contentType := http.DetectContentType(head)
+	if err != nil || (!strings.HasPrefix(contentType, "image") && !filetype.IsImage(head)) {
+		if err != nil {
+			return err
+		}
+		return errors.New("Cannot proceed with processing due to internal error")
+
+	}
+	var out bytes.Buffer
+	err = ResizeImage(buf, &out, NewDimension(600, 600))
+	if err != nil {
+		log.Printf(err.Error())
+		return errors.New("Cannot proceed with processing due to internal error")
+	}
+
+	completeRequest(&out, contentType, getCatalogueFilePath()+"/600.png")
+	return nil
 }
 
 // ResizeImage resizes the provided image to a destination dimension

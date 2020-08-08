@@ -15,6 +15,9 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/aws/aws-lambda-go/events"
+	"github.com/aws/aws-sdk-go/aws"
+
 	"github.com/gin-gonic/gin"
 	"github.com/h2non/filetype"
 )
@@ -134,7 +137,7 @@ func ProcessVideoInput(input *os.File, contentType string) error {
 	if err != nil {
 		return err
 	}
-	err = completeRequest(&outputThumb, http.DetectContentType(outputThumb.Bytes()), destinationRoot+"/thumb")
+	err = completeRequest(&outputThumb, http.DetectContentType(outputThumb.Bytes()), destinationRoot+"/thumb.png")
 	if err != nil {
 		log.Println("File processing failed for image!")
 		return err
@@ -143,7 +146,7 @@ func ProcessVideoInput(input *os.File, contentType string) error {
 	return nil
 }
 
-func generateThumbnail(input *os.File, outputThumb io.Writer, time string) error {
+func generateThumbnail(input io.Reader, outputThumb io.Writer, time string) error {
 	cmd := exec.Command("ffmpeg",
 		"-ss", time, "-i", "pipe:0",
 		"-frames:v", "1",
@@ -270,7 +273,7 @@ func CreateVideoServer(r *gin.Engine, config *Configuration) *gin.RouterGroup {
 		defer newFile.Close()
 		defer os.Remove(newFile.Name())
 
-		err = downloadData(sourceKey, newFile)
+		err = downloadData(sourceKey, newFile, "vod-file-storage")
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to parse Url"})
 			return
@@ -299,6 +302,77 @@ func CreateVideoServer(r *gin.Engine, config *Configuration) *gin.RouterGroup {
 		c.JSON(http.StatusOK, gin.H{"message": "Successfully processed data"})
 	})
 	return g
+}
+
+// HandleAWSMedia is called in lambda upon activity in a lambda
+func HandleAWSMedia(s3 events.S3Entity) error {
+	inputData := aws.NewWriteAtBuffer([]byte{})
+	err := downloadData(s3.Object.URLDecodedKey, inputData, "vod-file-storage")
+	if err != nil {
+		return errors.New("Failed to download file")
+	}
+	reader := bytes.NewReader(inputData.Bytes())
+	head := inputData.Bytes()[:512]
+	isVideoType, contentType := IsVideo(head)
+	if err != nil || (!filetype.IsVideo(head) && !isVideoType) {
+		if err != nil {
+			return err
+		}
+		return errors.New("Cannot proceed with processing due to internal error")
+	}
+
+	// Get the current video dimension in order to calculate resizing
+	dimen, err := GetDimension(reader)
+	if err != nil {
+		return err
+	}
+	destinationRoot := getMediaFilePath()
+	var output1080 bytes.Buffer
+	var output720 bytes.Buffer
+	var outputThumb bytes.Buffer
+
+	// Current design is to have 1080p and 720p resolutions available
+	// First check video size before resizing
+	if dimen.height > 1080 {
+		// Video is larger than 1080, hence proceed to resizing step
+
+		// After dimension read, move file reader to beginning once more
+		reader.Seek(0, 0)
+		err = startVideoProcess(reader, &output1080, VideoSizes["1080p"])
+		if err != nil {
+			return err
+		}
+		err = completeRequest(&output1080, contentType, destinationRoot+"/1080.mp4")
+		if err != nil {
+			return err
+		}
+	}
+
+	// Check if the file is larger than 720p
+	if dimen.height > 720 {
+		// Move file reader to beginning once more... Not sure what got executed last... Just a precaution
+		reader.Seek(0, 0)
+		err = startVideoProcess(reader, &output720, VideoSizes["720p"])
+		if err != nil {
+			return err
+		}
+		err = completeRequest(&output720, contentType, destinationRoot+"/720.mp4")
+		if err != nil {
+			return err
+		}
+	}
+
+	reader.Seek(0, 0)
+	err = generateThumbnail(reader, &outputThumb, "00:00:03")
+	if err != nil {
+		return err
+	}
+	err = completeRequest(&outputThumb, http.DetectContentType(outputThumb.Bytes()), destinationRoot+"/thumb.png")
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func startVideoProcess(input io.Reader, outputVideo io.Writer, d Dimension) error {

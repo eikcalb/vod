@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net/http"
@@ -8,10 +9,12 @@ import (
 	"strings"
 
 	vod "eikcalb.dev/vod/src"
+	"github.com/aws/aws-lambda-go/events"
+	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/gin-gonic/gin"
 )
 
-func SetupRouter(config *vod.Configuration) *gin.Engine {
+func setupRouter(config *vod.Configuration) *gin.Engine {
 	switch strings.ToLower(config.ServerMode) {
 	case "release":
 		gin.SetMode(gin.ReleaseMode)
@@ -29,8 +32,29 @@ func SetupRouter(config *vod.Configuration) *gin.Engine {
 	return r
 }
 
-func main() {
-	r := SetupRouter(vod.Config)
+func setupLambda(ctx context.Context, event events.S3Event) error {
+	for _, record := range event.Records {
+		log.Print(record.S3.Object.URLDecodedKey)
+		switch record.S3.Bucket.Name {
+		case "vod-catalogue":
+			err := vod.HandleAWSCatalogue(record.S3)
+			if err != nil {
+				log.Println(err)
+				return err
+			}
+		case "vod-file-storage":
+			err := vod.HandleAWSMedia(record.S3)
+			if err != nil {
+				log.Println(err)
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func serverMain() {
+	r := setupRouter(vod.Config)
 
 	// Register middleware routers
 	vod.CreateVideoServer(r, vod.Config)
@@ -41,4 +65,8 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+}
+
+func main() {
+	lambda.Start(setupLambda)
 }
