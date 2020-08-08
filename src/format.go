@@ -48,6 +48,11 @@ var (
 	}
 )
 
+// NewDimension returns a pointer to a Dimension instance
+func NewDimension(w, h int) *Dimension {
+	return &Dimension{w, h}
+}
+
 // FindNearestNext returns the index for which to get the next video resolution
 func (d Dimension) FindNearestNext(cur int) (int, error) {
 	if cur == 0 {
@@ -86,5 +91,5 @@ func IsVideo(data []byte) (bool, string) {
 }
 
 func getFilePath() string {
-	return "video/resize/" + uuid.New().String()
+	return "findapp/" + uuid.New().String()
 }

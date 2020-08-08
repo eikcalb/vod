@@ -55,7 +55,7 @@ func LoadConfig(path string) *Configuration {
 func init() {
 	dir, err := os.Getwd()
 	if err != nil {
-		log.Fatal("Cannot continue with application", err)
+		log.Fatal("Cannot continue with application if I cannot find the current working directory", err)
 	}
 	path, err := filepath.Abs(dir + "/config.json")
 	if err != nil {

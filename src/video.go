@@ -106,7 +106,7 @@ func ProcessVideoInput(input *os.File, contentType string) error {
 			log.Println("File processing failed!")
 			return nil
 		}
-		err = completeRequest(&output1080, contentType, destinationRoot+"/1080")
+		err = completeRequest(&output1080, contentType, destinationRoot+"/1080.mp4")
 		if err != nil {
 			log.Println("File processing failed for 1080 video!")
 			return err
@@ -122,7 +122,7 @@ func ProcessVideoInput(input *os.File, contentType string) error {
 			log.Println("File processing failed!")
 			return err
 		}
-		err = completeRequest(&output720, contentType, destinationRoot+"/720")
+		err = completeRequest(&output720, contentType, destinationRoot+"/720.mp4")
 		if err != nil {
 			log.Println("File processing failed for 720 video!")
 			return err
@@ -148,7 +148,7 @@ func generateThumbnail(input *os.File, outputThumb io.Writer, time string) error
 		"-ss", time, "-i", "pipe:0",
 		"-frames:v", "1",
 		"-f", "image2",
-		"-vf", fmt.Sprintf("scale=%s:%s:force_original_aspect_ratio=decrease", strconv.Itoa(600), strconv.Itoa(600)),
+		"-vf", fmt.Sprintf("scale=%s:%s:force_original_aspect_ratio=decrease,pad=%s:%s:(ow-iw)/2:(oh-ih)/2", "600", "600", "600", "600"),
 		"pipe:1",
 	)
 
@@ -302,10 +302,11 @@ func CreateVideoServer(r *gin.Engine, config *Configuration) *gin.RouterGroup {
 }
 
 func startVideoProcess(input io.Reader, outputVideo io.Writer, d Dimension) error {
+	width, height := strconv.Itoa(d.width), strconv.Itoa(d.height)
 	cmd := exec.Command("ffmpeg",
 		"-i", "pipe:0",
 		"-movflags", "frag_keyframe+empty_moov", "-f", "mp4",
-		"-vf", fmt.Sprintf("scale=%s:%s:force_original_aspect_ratio=decrease", strconv.Itoa(d.width), strconv.Itoa(d.height)),
+		"-vf", fmt.Sprintf("scale=%s:%s:force_original_aspect_ratio=decrease,pad=%s:%s:(ow-iw)/2:(oh-ih)/2", width, height, width, height),
 		"pipe:1",
 	)
 

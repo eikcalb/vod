@@ -1,0 +1,15 @@
+{
+    "appName": "VOD",
+    "description": "Media processing application built with golang",
+    "serverMode":"release",
+    "listen":{
+        "host":"",
+        "port":80
+    },
+    "maxUploadSize": 104857600,
+    "aws":{
+ "accessKeyID":"AWS_ACCESS_KEY_ID",
+"accessKeySecret":"AWS_SECRET_ACCESS_KEY",
+"sessionToken":"AWS_SESSION_TOKEN"
+    }
+}
