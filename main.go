@@ -36,13 +36,13 @@ func setupLambda(ctx context.Context, event events.S3Event) error {
 	for _, record := range event.Records {
 		log.Print(record.S3.Object.URLDecodedKey)
 		switch record.S3.Bucket.Name {
-		case "vod-catalogue":
+		case vod.Config.AWS.CatalogueBucketName:
 			err := vod.HandleAWSCatalogue(record.S3)
 			if err != nil {
 				log.Println(err)
 				return err
 			}
-		case "vod-file-storage":
+		case vod.Config.AWS.MediaBucketName:
 			err := vod.HandleAWSMedia(record.S3)
 			if err != nil {
 				log.Println(err)
