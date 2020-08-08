@@ -273,7 +273,7 @@ func CreateVideoServer(r *gin.Engine, config *Configuration) *gin.RouterGroup {
 		defer newFile.Close()
 		defer os.Remove(newFile.Name())
 
-		err = downloadData(sourceKey, newFile, "vod-file-storage")
+		err = downloadData(sourceKey, newFile, Config.AWS.MediaBucketName)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to parse Url"})
 			return

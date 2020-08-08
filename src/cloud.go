@@ -20,7 +20,7 @@ func downloadData(inputKey string, result io.WriterAt, bucket string) error {
 
 	config := &aws.Config{
 		Credentials: creds,
-		Region:      aws.String("us-east-2"),
+		Region:      aws.String(Config.AWS.Region),
 	}
 	sess := session.Must(session.NewSession(config))
 	downloader := s3manager.NewDownloader(sess)
@@ -42,12 +42,12 @@ func completeRequest(data io.Reader, contentType string, path string) error {
 
 	config := &aws.Config{
 		Credentials: creds,
-		Region:      aws.String("us-east-2"),
+		Region:      aws.String(Config.AWS.Region),
 	}
 	sess := session.Must(session.NewSession(config))
 	uploader := s3manager.NewUploader(sess)
-	resp, err := uploader.Upload(&s3manager.UploadInput{
-		Bucket:      aws.String("vod-lambda-output"),
+	_, err := uploader.Upload(&s3manager.UploadInput{
+		Bucket:      aws.String(Config.AWS.BusketName),
 		Key:         aws.String(path),
 		ACL:         aws.String("public-read"),
 		Body:        data,
@@ -56,7 +56,6 @@ func completeRequest(data io.Reader, contentType string, path string) error {
 	if err != nil {
 		return err
 	}
-	log.Printf("Upload successful to %s\n", resp.Location)
 	return nil
 }
 
@@ -65,7 +64,5 @@ func confirmConfig() {
 	awsID := os.Getenv(Config.AWS.AccessKeyID)
 	awsSecret := os.Getenv(Config.AWS.AccessKeySecret)
 	_ = credentials.NewStaticCredentials(awsID, awsSecret, "")
-	log.Println("Start read from AWS")
-	log.Printf("aws data: %v %v", awsID, awsSecret)
 	return
 }

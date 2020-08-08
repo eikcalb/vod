@@ -43,7 +43,7 @@ func CreateImageServer(r *gin.Engine) *gin.RouterGroup {
 			return
 		}
 
-		completeRequest(&out, contentType, getCatalogueFilePath()+"/600")
+		completeRequest(&out, contentType, getCatalogueFilePath()+"/600.png")
 		c.JSON(http.StatusOK, gin.H{"message": "Successfully processed data"})
 	})
 
@@ -53,7 +53,7 @@ func CreateImageServer(r *gin.Engine) *gin.RouterGroup {
 // HandleAWSCatalogue is called in lambda upon activity in a lambda
 func HandleAWSCatalogue(s3 events.S3Entity) error {
 	inputData := aws.NewWriteAtBuffer([]byte{})
-	err := downloadData(s3.Object.URLDecodedKey, inputData, "vod-catalogue")
+	err := downloadData(s3.Object.URLDecodedKey, inputData, Config.AWS.CatalogueBucketName)
 	if err != nil {
 		return errors.New("Failed to download file")
 	}

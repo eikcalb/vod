@@ -19,9 +19,13 @@ type Configuration struct {
 	ServerMode    string `json:"serverMode"`
 	MaxUploadSize int64  `json:"maxUploadSize"`
 	AWS           struct {
-		AccessKeyID     string `json:"accessKeyID"`
-		AccessKeySecret string `json:"accessKeySecret"`
-		SessionToken    string `json:"sessionToken"`
+		AccessKeyID         string `json:"accessKeyID"`
+		AccessKeySecret     string `json:"accessKeySecret"`
+		SessionToken        string `json:"sessionToken"`
+		BusketName          string `json:"bucketName"`
+		Region              string `json:"region"`
+		MediaBucketName     string `json:"mediaBucketName"`
+		CatalogueBucketName string `json:"catalogueBucketName"`
 	}
 }
 

@@ -10,6 +10,10 @@
     "aws":{
  "accessKeyID":"AWS_ACCESS_KEY_ID",
 "accessKeySecret":"AWS_SECRET_ACCESS_KEY",
-"sessionToken":"AWS_SESSION_TOKEN"
+"sessionToken":"AWS_SESSION_TOKEN",
+"bucketName":"vod-lambda-output",
+"mediaBucketName":"vod-file-storage",
+"catalogueBucketName":"vod-catalogue-storage",
+"region":"us-east-1"
     }
 }
