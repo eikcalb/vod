@@ -1,21 +1,46 @@
 package vod
 
 import (
+	"bufio"
+	"bytes"
 	"fmt"
 	"io"
 	"log"
+	"net/http"
 	"os/exec"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/h2non/filetype"
 )
 
 // CreateImageServer creates an image server
 func CreateImageServer(r *gin.Engine) *gin.RouterGroup {
-	g := r.Group("/image")
+	g := r.Group("/findapp")
 
-	g.POST("/", func(c *gin.Context) {
+	g.POST("/catalogue", func(c *gin.Context) {
+		reader := c.Request.Body
+		buf := bufio.NewReaderSize(reader, 600)
+		head, err := buf.Peek(512)
+		contentType := http.DetectContentType(head)
+		defer reader.Close()
+		if err != nil || (!strings.HasPrefix(contentType, "image") && !filetype.IsVideo(head)) {
+			log.Printf(err.Error())
+			c.JSON(http.StatusNotAcceptable, gin.H{"error": "Cannot proceed with processing due to internal error"})
+			return
+		}
 
+		var out bytes.Buffer
+		err = ResizeImage(buf, &out, NewDimension(600, 600))
+		if err != nil {
+			log.Printf(err.Error())
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Cannot proceed with processing due to internal error"})
+			return
+		}
+
+		completeRequest(&out, contentType, getCatalogueFilePath()+"/600")
+		c.JSON(http.StatusOK, gin.H{"message": "Successfully processed data"})
 	})
 	log.Print(g)
 	return g

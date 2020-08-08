@@ -1,5 +1,5 @@
 {
-    "appName": "VOD",
+    "appName": "FindApp - VOD",
     "description": "Media processing application built with golang",
     "serverMode":"release",
     "listen":{

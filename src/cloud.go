@@ -56,7 +56,7 @@ func completeRequest(data io.Reader, contentType string, path string) error {
 	if err != nil {
 		return err
 	}
-	log.Printf("Upload successful to %s", resp.Location)
+	log.Printf("Upload successful to %s\n", resp.Location)
 	return nil
 }
 

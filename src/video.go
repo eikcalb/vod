@@ -89,7 +89,7 @@ func ProcessVideoInput(input *os.File, contentType string) error {
 		return err
 	}
 
-	destinationRoot := getFilePath()
+	destinationRoot := getMediaFilePath()
 	var output1080 bytes.Buffer
 	var output720 bytes.Buffer
 	var outputThumb bytes.Buffer
@@ -165,7 +165,7 @@ func generateThumbnail(input *os.File, outputThumb io.Writer, time string) error
 // The desired workflow is to get the initial video data into a file and feed that file to the ffmpeg process.
 func CreateVideoServer(r *gin.Engine, config *Configuration) *gin.RouterGroup {
 	g := r.Group("/findapp")
-	g.POST("/file", func(c *gin.Context) {
+	g.POST("/gemform", func(c *gin.Context) {
 		//c.Request.ParseMultipartForm(config.MaxUploadSize)
 		rawFile, _, err := c.Request.FormFile("upload")
 		if err != nil {
@@ -206,7 +206,7 @@ func CreateVideoServer(r *gin.Engine, config *Configuration) *gin.RouterGroup {
 
 	})
 
-	g.POST("/stream", func(c *gin.Context) {
+	g.POST("/gem", func(c *gin.Context) {
 		// Get uploaded file
 		reader := c.Request.Body
 		buf := bufio.NewReaderSize(reader, 600)
@@ -250,12 +250,12 @@ func CreateVideoServer(r *gin.Engine, config *Configuration) *gin.RouterGroup {
 		c.JSON(http.StatusOK, gin.H{"message": "Successfully processed data"})
 	})
 
-	g.POST("/resize", func(c *gin.Context) {
-		rawURL, exists := c.GetQuery("url")
+	g.PATCH("/gem", func(c *gin.Context) {
+		rawFileKey, exists := c.GetQuery("url")
 		if !exists {
 
 		}
-		sourceURL, err := url.QueryUnescape(rawURL)
+		sourceKey, err := url.QueryUnescape(rawFileKey)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Url must be provided"})
 			return
@@ -270,7 +270,7 @@ func CreateVideoServer(r *gin.Engine, config *Configuration) *gin.RouterGroup {
 		defer newFile.Close()
 		defer os.Remove(newFile.Name())
 
-		err = downloadData(sourceURL, newFile)
+		err = downloadData(sourceKey, newFile)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to parse Url"})
 			return
