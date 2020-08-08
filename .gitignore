@@ -2,3 +2,4 @@
 .DS_Store
 vod
 config.json
+go.sum

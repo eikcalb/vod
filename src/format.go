@@ -16,6 +16,7 @@ type Dimension struct {
 }
 
 const (
+	// STOP stops iteration
 	STOP = iota
 )
 

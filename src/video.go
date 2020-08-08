@@ -164,7 +164,7 @@ func generateThumbnail(input *os.File, outputThumb io.Writer, time string) error
 // CreateVideoServer is used to process upload post request.
 // The desired workflow is to get the initial video data into a file and feed that file to the ffmpeg process.
 func CreateVideoServer(r *gin.Engine, config *Configuration) *gin.RouterGroup {
-	g := r.Group("/video")
+	g := r.Group("/findapp")
 	g.POST("/file", func(c *gin.Context) {
 		//c.Request.ParseMultipartForm(config.MaxUploadSize)
 		rawFile, _, err := c.Request.FormFile("upload")

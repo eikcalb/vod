@@ -3,6 +3,7 @@ package vod
 import (
 	"io"
 	"log"
+	"os"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
@@ -12,7 +13,9 @@ import (
 )
 
 func downloadData(inputKey string, result io.WriterAt) error {
-	creds := credentials.NewStaticCredentials(Config.AWS.AWS_ACCESS_KEY_ID, Config.AWS.AWS_SECRET_ACCESS_KEY, "")
+	awsID := os.Getenv(Config.AWS.AccessKeyID)
+	awsSecret := os.Getenv(Config.AWS.AccessKeySecret)
+	creds := credentials.NewStaticCredentials(awsID, awsSecret, "")
 	log.Println("Start read from AWS")
 
 	config := &aws.Config{
@@ -32,7 +35,9 @@ func downloadData(inputKey string, result io.WriterAt) error {
 }
 
 func completeRequest(data io.Reader, contentType string, path string) error {
-	creds := credentials.NewStaticCredentials(Config.AWS.AWS_ACCESS_KEY_ID, Config.AWS.AWS_SECRET_ACCESS_KEY, "")
+	awsID := os.Getenv(Config.AWS.AccessKeyID)
+	awsSecret := os.Getenv(Config.AWS.AccessKeySecret)
+	creds := credentials.NewStaticCredentials(awsID, awsSecret, "")
 	log.Println("Start write to AWS")
 
 	config := &aws.Config{
@@ -53,4 +58,14 @@ func completeRequest(data io.Reader, contentType string, path string) error {
 	}
 	log.Printf("Upload successful to %s", resp.Location)
 	return nil
+}
+
+// ConfirmConfig confirms environment vars are readable
+func confirmConfig() {
+	awsID := os.Getenv(Config.AWS.AccessKeyID)
+	awsSecret := os.Getenv(Config.AWS.AccessKeySecret)
+	_ = credentials.NewStaticCredentials(awsID, awsSecret, "")
+	log.Println("Start read from AWS")
+	log.Printf("aws data: %v %v", awsID, awsSecret)
+	return
 }

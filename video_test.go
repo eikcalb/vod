@@ -7,7 +7,7 @@ import (
 	vod "eikcalb.dev/vod/src"
 )
 
-func TestVideoResize(t *testing.T) {
+func VideoResize(t *testing.T) {
 	filename := "upload-689903012.mp4"
 	t.Log("Starting video resize test")
 	file, err := os.OpenFile(filename, os.O_RDONLY, os.ModePerm)
@@ -21,4 +21,8 @@ func TestVideoResize(t *testing.T) {
 	} else {
 		t.Logf("Success!!")
 	}
+}
+
+func TestAWSKeys(t *testing.T) {
+	vod.ConfirmConfig()
 }
