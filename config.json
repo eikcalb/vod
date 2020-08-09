@@ -8,12 +8,13 @@
     },
     "maxUploadSize": 104857600,
     "aws": {
-        "accessKeyID": "AWS_ACCESS_KEY_ID",
-        "accessKeySecret": "AWS_SECRET_ACCESS_KEY",
-        "sessionToken": "AWS_SESSION_TOKEN",
-        "bucketName": "vod-lambda-output-test",
-        "mediaBucketName": "vod-file-storage-test",
-        "catalogueBucketName": "vod-catalogue-storage",
+        "accessKeyID": "ACCESS_KEY_ID",
+        "accessKeySecret": "SECRET_ACCESS_KEY",
+        "sessionToken": "SESSION_TOKEN",
+        "inputBucketName": "vod-input-raw",
+        "outputBucketName": "raw-lord-data",
+        "cataloguePrefix": "catalogue/",
+        "mediaPrefix":"media/",
         "region": "us-east-1"
     }
 }

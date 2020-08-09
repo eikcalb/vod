@@ -53,7 +53,8 @@ func CreateImageServer(r *gin.Engine) *gin.RouterGroup {
 // HandleAWSCatalogue is called in lambda upon activity in a lambda
 func HandleAWSCatalogue(s3 events.S3Entity) error {
 	inputData := aws.NewWriteAtBuffer([]byte{})
-	err := downloadData(s3.Object.URLDecodedKey, inputData, Config.AWS.CatalogueBucketName)
+	log.Printf("Data URL decoded key is %s\nNormal key is %s", s3.Object.URLDecodedKey, s3.Object.Key)
+	err := downloadData(s3.Object.Key, inputData, Config.AWS.InputBucketName)
 	if err != nil {
 		return err
 	}

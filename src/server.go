@@ -22,10 +22,11 @@ type Configuration struct {
 		AccessKeyID         string `json:"accessKeyID"`
 		AccessKeySecret     string `json:"accessKeySecret"`
 		SessionToken        string `json:"sessionToken"`
-		BusketName          string `json:"bucketName"`
+		OutputBucketName    string `json:"outputBucketName"`
+		InputBucketName     string `json:"inputBucketName"`
 		Region              string `json:"region"`
-		MediaBucketName     string `json:"mediaBucketName"`
-		CatalogueBucketName string `json:"catalogueBucketName"`
+		MediaPrefixName     string `json:"mediaPrefix"`
+		CataloguePrefixName string `json:"cataloguePrefix"`
 	}
 }
 
@@ -66,4 +67,6 @@ func init() {
 		log.Fatal("Cannot continue with application", err)
 	}
 	Config = LoadConfig(path)
+
+	log.SetFlags(log.LstdFlags | log.Lshortfile)
 }

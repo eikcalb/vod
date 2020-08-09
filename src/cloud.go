@@ -16,7 +16,7 @@ func downloadData(inputKey string, result io.WriterAt, bucket string) error {
 	awsID := os.Getenv(Config.AWS.AccessKeyID)
 	awsSecret := os.Getenv(Config.AWS.AccessKeySecret)
 	creds := credentials.NewStaticCredentials(awsID, awsSecret, "")
-	log.Println("Start read from AWS")
+	log.Printf("Start read from AWS using key \"%s\"\n", awsID)
 
 	config := &aws.Config{
 		Credentials: creds,
@@ -47,7 +47,7 @@ func completeRequest(data io.Reader, contentType string, path string) error {
 	sess := session.Must(session.NewSession(config))
 	uploader := s3manager.NewUploader(sess)
 	_, err := uploader.Upload(&s3manager.UploadInput{
-		Bucket:      aws.String(Config.AWS.BusketName),
+		Bucket:      aws.String(Config.AWS.OutputBucketName),
 		Key:         aws.String(path),
 		ACL:         aws.String("public-read"),
 		Body:        data,
@@ -57,12 +57,4 @@ func completeRequest(data io.Reader, contentType string, path string) error {
 		return err
 	}
 	return nil
-}
-
-// ConfirmConfig confirms environment vars are readable
-func confirmConfig() {
-	awsID := os.Getenv(Config.AWS.AccessKeyID)
-	awsSecret := os.Getenv(Config.AWS.AccessKeySecret)
-	_ = credentials.NewStaticCredentials(awsID, awsSecret, "")
-	return
 }

@@ -91,9 +91,9 @@ func IsVideo(data []byte) (bool, string) {
 }
 
 func getMediaFilePath() string {
-	return "findappmedia/" + uuid.New().String()
+	return "media/" + uuid.New().String()
 }
 
 func getCatalogueFilePath() string {
-	return "findappcatalogue/" + uuid.New().String()
+	return "catalogue/" + uuid.New().String()
 }

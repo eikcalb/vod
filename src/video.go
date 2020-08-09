@@ -273,7 +273,7 @@ func CreateVideoServer(r *gin.Engine, config *Configuration) *gin.RouterGroup {
 		defer newFile.Close()
 		defer os.Remove(newFile.Name())
 
-		err = downloadData(sourceKey, newFile, Config.AWS.MediaBucketName)
+		err = downloadData(sourceKey, newFile, Config.AWS.InputBucketName)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to parse Url"})
 			return
@@ -307,9 +307,9 @@ func CreateVideoServer(r *gin.Engine, config *Configuration) *gin.RouterGroup {
 // HandleAWSMedia is called in lambda upon activity in a lambda
 func HandleAWSMedia(s3 events.S3Entity) error {
 	inputData := aws.NewWriteAtBuffer([]byte{})
-	err := downloadData(s3.Object.URLDecodedKey, inputData, "vod-file-storage")
+	err := downloadData(s3.Object.Key, inputData, Config.AWS.InputBucketName)
 	if err != nil {
-		return errors.New("Failed to download file")
+		return err
 	}
 	reader := bytes.NewReader(inputData.Bytes())
 	head := inputData.Bytes()[:512]
