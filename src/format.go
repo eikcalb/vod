@@ -2,7 +2,6 @@ package vod
 
 import (
 	"errors"
-	"log"
 	"net/http"
 	"strings"
 
@@ -79,7 +78,6 @@ func (d Dimension) FindNearestNext(cur int) (int, error) {
 // IsVideo checks if the provided file header is a video
 func IsVideo(data []byte) (bool, string) {
 	detectedType := http.DetectContentType(data)
-	log.Printf("detected file type is %s", detectedType)
 	if strings.EqualFold(detectedType, "application/octet-stream") {
 		// If the type is undetecteable, return false
 		return false, detectedType

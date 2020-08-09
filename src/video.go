@@ -315,8 +315,9 @@ func HandleAWSMedia(s3 events.S3Entity) error {
 	if err != nil {
 		return err
 	}
-	reader := bytes.NewReader(inputData.Bytes())
-	head := inputData.Bytes()[:512]
+	bytesRead := inputData.Bytes()
+	reader := bytes.NewReader(bytesRead[:])
+	head := bytesRead[:512]
 	isVideoType, contentType := IsVideo(head)
 	if err != nil || (!filetype.IsVideo(head) && !isVideoType) {
 		if err != nil {
