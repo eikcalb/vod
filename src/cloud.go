@@ -16,7 +16,6 @@ func downloadData(inputKey string, result io.WriterAt, bucket string) error {
 	awsID := os.Getenv(Config.AWS.AccessKeyID)
 	awsSecret := os.Getenv(Config.AWS.AccessKeySecret)
 	creds := credentials.NewStaticCredentials(awsID, awsSecret, "")
-	log.Printf("Start read from AWS using key \"%s\"\n", awsID)
 
 	config := &aws.Config{
 		Credentials: creds,
