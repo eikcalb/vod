@@ -8,6 +8,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"net/url"
 	"os/exec"
 	"strconv"
 	"strings"
@@ -53,8 +54,11 @@ func CreateImageServer(r *gin.Engine) *gin.RouterGroup {
 // HandleAWSCatalogue is called in lambda upon activity in a lambda
 func HandleAWSCatalogue(s3 events.S3Entity) error {
 	inputData := aws.NewWriteAtBuffer([]byte{})
-	log.Printf("Data URL decoded key is %s\nNormal key is %s", s3.Object.URLDecodedKey, s3.Object.Key)
-	err := downloadData(s3.Object.Key, inputData, Config.AWS.InputBucketName)
+	fileKey, err := url.QueryUnescape(s3.Object.Key)
+	if err != nil {
+		return err
+	}
+	err = downloadData(fileKey, inputData, Config.AWS.InputBucketName)
 	if err != nil {
 		return err
 	}

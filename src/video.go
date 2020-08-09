@@ -307,7 +307,11 @@ func CreateVideoServer(r *gin.Engine, config *Configuration) *gin.RouterGroup {
 // HandleAWSMedia is called in lambda upon activity in a lambda
 func HandleAWSMedia(s3 events.S3Entity) error {
 	inputData := aws.NewWriteAtBuffer([]byte{})
-	err := downloadData(s3.Object.Key, inputData, Config.AWS.InputBucketName)
+	fileKey, err := url.QueryUnescape(s3.Object.Key)
+	if err != nil {
+		return err
+	}
+	err = downloadData(fileKey, inputData, Config.AWS.InputBucketName)
 	if err != nil {
 		return err
 	}

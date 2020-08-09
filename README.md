@@ -8,15 +8,17 @@ Processing is abstracted to enable any arbitrary endpoint connect to the service
 
 To clear old zip, rebuild golang project and repackage the zip
 ```shell
-rm function.zip && GOOS=linux go build main && zip function.zip config.json
+rm function.zip && GOOS=linux go build main.go && zip function.zip config.json main
 ```
 
+Create new function
 ```shell
 aws lambda create-function --function-name vod-lambda-function \
 --runtime go1.x --zip-file fileb://function.zip --handler main --role arn:aws:iam::468577352438:role/lambda-role \
 --memory-size 1024 --timeout 840
 ```
 
+Update lambda function
 ```shell
 aws lambda update-function-code --function-name vod-lambda-function --zip-file fileb://function.zip 
 ```
