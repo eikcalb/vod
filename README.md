@@ -15,7 +15,7 @@ Create new function
 ```shell
 aws lambda create-function --function-name vod-lambda-function \
 --runtime go1.x --zip-file fileb://function.zip --handler main --role arn:aws:iam::468577352438:role/lambda-role \
---memory-size 1024 --timeout 840
+--memory-size 2048 --timeout 840
 ```
 
 Update lambda function

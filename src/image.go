@@ -44,7 +44,7 @@ func CreateImageServer(r *gin.Engine) *gin.RouterGroup {
 			return
 		}
 
-		completeRequest(&out, contentType, getCatalogueFilePath()+"/600.png")
+		completeRequest(&out, contentType, generatePath("catalogue/")+"/600.png")
 		c.JSON(http.StatusOK, gin.H{"message": "Successfully processed data"})
 	})
 
@@ -79,7 +79,7 @@ func HandleAWSCatalogue(s3 events.S3Entity) error {
 		return err
 	}
 
-	completeRequest(&out, contentType, getCatalogueFilePath()+"/600.png")
+	completeRequest(&out, contentType, getCatalogueFilePath(fileKey)+"/600.png")
 	return nil
 }
 

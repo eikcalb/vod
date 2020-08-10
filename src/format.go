@@ -88,10 +88,18 @@ func IsVideo(data []byte) (bool, string) {
 	}
 }
 
-func getMediaFilePath() string {
-	return "media/" + uuid.New().String()
+func getMediaFilePath(input string) string {
+	pathArray := strings.Split(input, "/")
+	// uuid will be the second entry in the array
+	return "media/" + pathArray[1]
 }
 
-func getCatalogueFilePath() string {
-	return "catalogue/" + uuid.New().String()
+func getCatalogueFilePath(input string) string {
+	pathArray := strings.Split(input, "/")
+	// uuid will be the second entry in the array
+	return "catalogue/" + pathArray[1]
+}
+
+func generatePath(prefix string) string {
+	return prefix + uuid.New().String()
 }

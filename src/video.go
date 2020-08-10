@@ -81,8 +81,7 @@ func GetDimension(video io.Reader) (*Dimension, error) {
 	return &result, nil
 }
 
-// ProcessVideoInput processes the video input
-func ProcessVideoInput(input *os.File, contentType string) error {
+func processVideoInputSmartDimension(input *os.File, contentType string) error {
 	// Before processing file, move reader to begining to avoid errors
 	input.Seek(0, 0)
 
@@ -92,7 +91,7 @@ func ProcessVideoInput(input *os.File, contentType string) error {
 		return err
 	}
 
-	destinationRoot := getMediaFilePath()
+	destinationRoot := generatePath("media/")
 	var output1080 bytes.Buffer
 	var output720 bytes.Buffer
 	var outputThumb bytes.Buffer
@@ -133,6 +132,51 @@ func ProcessVideoInput(input *os.File, contentType string) error {
 	}
 
 	input.Seek(0, 0)
+	err = generateThumbnail(input, &outputThumb, "00:00:03")
+	if err != nil {
+		return err
+	}
+	err = completeRequest(&outputThumb, http.DetectContentType(outputThumb.Bytes()), destinationRoot+"/thumb.png")
+	if err != nil {
+		log.Println("File processing failed for image!")
+		return err
+	}
+
+	return nil
+}
+
+// ProcessVideoInput processes the video input.
+// The assumption is that all videos received are 1080p.
+// It is only required to resize once to 720p
+func ProcessVideoInput(input *os.File, contentType string) error {
+	// Before processing file, move reader to begining to avoid errors
+	input.Seek(0, 0)
+
+	destinationRoot := generatePath("media/")
+	var output1080 bytes.Buffer
+	var output720 bytes.Buffer
+	var outputThumb bytes.Buffer
+
+	err := completeRequest(&output1080, contentType, destinationRoot+"/1080.mp4")
+	if err != nil {
+		log.Println("File processing failed for 1080 video!")
+		return err
+	}
+
+	// Generate 720 video
+	err = startVideoProcess(input, &output720, VideoSizes["720p"])
+	if err != nil {
+		log.Println("File processing failed!")
+		return err
+	}
+	err = completeRequest(&output720, contentType, destinationRoot+"/720.mp4")
+	if err != nil {
+		log.Println("File processing failed for 720 video!")
+		return err
+	}
+
+	input.Seek(0, 0)
+	// Generate thumbnail
 	err = generateThumbnail(input, &outputThumb, "00:00:03")
 	if err != nil {
 		return err
@@ -311,10 +355,7 @@ func HandleAWSMedia(s3 events.S3Entity) error {
 	if err != nil {
 		return err
 	}
-	err = downloadData(fileKey, inputData, Config.AWS.InputBucketName)
-	if err != nil {
-		return err
-	}
+
 	bytesRead := inputData.Bytes()
 	reader := bytes.NewReader(bytesRead[:])
 	head := bytesRead[:512]
@@ -325,46 +366,27 @@ func HandleAWSMedia(s3 events.S3Entity) error {
 		}
 		return errors.New("Cannot proceed with processing due to internal error")
 	}
-
-	// Get the current video dimension in order to calculate resizing
-	dimen, err := GetDimension(reader)
+	err = downloadData(fileKey, inputData, Config.AWS.InputBucketName)
 	if err != nil {
 		return err
 	}
-	destinationRoot := getMediaFilePath()
-	var output1080 bytes.Buffer
-	var output720 bytes.Buffer
-	var outputThumb bytes.Buffer
+	destinationRoot := getMediaFilePath(fileKey)
 
-	// Current design is to have 1080p and 720p resolutions available
-	// First check video size before resizing
-	if dimen.height > 1080 {
-		// Video is larger than 1080, hence proceed to resizing step
-
-		// After dimension read, move file reader to beginning once more
-		reader.Seek(0, 0)
-		err = startVideoProcess(reader, &output1080, VideoSizes["1080p"])
-		if err != nil {
-			return err
-		}
-		err = completeRequest(&output1080, contentType, destinationRoot+"/1080.mp4")
-		if err != nil {
-			return err
-		}
+	// Copy root file to output bucket
+	err = copyData(fileKey, destinationRoot+"/1080.mp4", contentType)
+	if err != nil {
+		return err
 	}
 
-	// Check if the file is larger than 720p
-	if dimen.height > 720 {
-		// Move file reader to beginning once more... Not sure what got executed last... Just a precaution
-		reader.Seek(0, 0)
-		err = startVideoProcess(reader, &output720, VideoSizes["720p"])
-		if err != nil {
-			return err
-		}
-		err = completeRequest(&output720, contentType, destinationRoot+"/720.mp4")
-		if err != nil {
-			return err
-		}
+	var output720 bytes.Buffer
+	var outputThumb bytes.Buffer
+	err = startVideoProcess(reader, &output720, VideoSizes["720p"])
+	if err != nil {
+		return err
+	}
+	err = completeRequest(&output720, contentType, destinationRoot+"/720.mp4")
+	if err != nil {
+		return err
 	}
 
 	reader.Seek(0, 0)
