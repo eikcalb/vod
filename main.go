@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -35,21 +34,18 @@ func setupRouter(config *vod.Configuration) *gin.Engine {
 
 func setupLambda(ctx context.Context, event events.S3Event) error {
 	for _, record := range event.Records {
-		log.Print(record.S3.Object.URLDecodedKey)
 		if record.S3.Bucket.Name != vod.Config.AWS.InputBucketName {
-			return errors.New("Cannot process requests for this bucket")
+			return fmt.Errorf("Cannot process requests for this bucket(%s)", record.S3.Bucket.Name)
 		}
 		switch {
 		case strings.HasPrefix(record.S3.Object.Key, vod.Config.AWS.CataloguePrefixName):
 			err := vod.HandleAWSCatalogue(record.S3)
 			if err != nil {
-				log.Println(err)
 				return err
 			}
 		case strings.HasPrefix(record.S3.Object.Key, vod.Config.AWS.MediaPrefixName):
 			err := vod.HandleAWSMedia(record.S3)
 			if err != nil {
-				log.Println(err)
 				return err
 			}
 		}

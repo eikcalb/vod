@@ -11,8 +11,8 @@
         "accessKeyID": "ACCESS_KEY_ID",
         "accessKeySecret": "SECRET_ACCESS_KEY",
         "sessionToken": "SESSION_TOKEN",
-        "inputBucketName": "findapp-media-vod-input",
-        "outputBucketName": "findapp-media-vod-output",
+        "inputBucketName": "find-app-media-vod-input",
+        "outputBucketName": "find-app-media-vod-output",
         "cataloguePrefix": "catalogue/",
         "mediaPrefix":"media/",
         "region": "us-east-1"
