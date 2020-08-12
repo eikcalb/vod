@@ -356,6 +356,11 @@ func HandleAWSMedia(s3 events.S3Entity) error {
 		return err
 	}
 
+	err = downloadData(fileKey, inputData, Config.AWS.InputBucketName)
+	if err != nil {
+		return err
+	}
+
 	bytesRead := inputData.Bytes()
 	reader := bytes.NewReader(bytesRead[:])
 	head := bytesRead[:512]
@@ -365,10 +370,6 @@ func HandleAWSMedia(s3 events.S3Entity) error {
 			return err
 		}
 		return errors.New("Cannot proceed with processing due to internal error")
-	}
-	err = downloadData(fileKey, inputData, Config.AWS.InputBucketName)
-	if err != nil {
-		return err
 	}
 	destinationRoot := getMediaFilePath(fileKey)
 
