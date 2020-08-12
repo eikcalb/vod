@@ -11,8 +11,8 @@
         "accessKeyID": "ACCESS_KEY_ID",
         "accessKeySecret": "SECRET_ACCESS_KEY",
         "sessionToken": "SESSION_TOKEN",
-        "inputBucketName": "vod-input-raw",
-        "outputBucketName": "raw-lord-data",
+        "inputBucketName": "findapp-media-vod-input",
+        "outputBucketName": "findapp-media-vod-output",
         "cataloguePrefix": "catalogue/",
         "mediaPrefix":"media/",
         "region": "us-east-1"
