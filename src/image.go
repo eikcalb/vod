@@ -3,7 +3,6 @@ package vod
 import (
 	"bufio"
 	"bytes"
-	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -37,7 +36,7 @@ func CreateImageServer(r *gin.Engine) *gin.RouterGroup {
 		}
 
 		var out bytes.Buffer
-		err = ResizeImage(buf, &out, NewDimension(600, 600))
+		err = ResizeImage(buf, &out, *NewDimension(600, 600))
 		if err != nil {
 			log.Printf(err.Error())
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Cannot proceed with processing due to internal error"})
@@ -62,29 +61,45 @@ func HandleAWSCatalogue(s3 events.S3Entity) error {
 	if err != nil {
 		return err
 	}
-
-	buf := bufio.NewReaderSize(bytes.NewReader(inputData.Bytes()), 600)
-	head, err := buf.Peek(512)
-	contentType := http.DetectContentType(head)
-	if err != nil || (!strings.HasPrefix(contentType, "image") && !filetype.IsImage(head)) {
+	imageBytes := inputData.Bytes()
+	bytesReader := bytes.NewReader(imageBytes)
+	contentType := http.DetectContentType(imageBytes[:512])
+	if !strings.HasPrefix(contentType, "image") && !filetype.IsImage(imageBytes[:300]) {
 		if err != nil {
 			return err
 		}
-		return errors.New("Cannot proceed with processing due to internal error")
-
+		fmt.Printf("Cannot proceed with processing due to internal error, %v", err)
+		// If file is not an image, do not return an error to prevent lambda from being rerun.
+		return nil
 	}
-	var out bytes.Buffer
-	err = ResizeImage(buf, &out, NewDimension(600, 600))
+	destinationRoot := getCatalogueFilePath(fileKey)
+
+	// Copy root file to output bucket
+	err = copyData(fileKey, destinationRoot+"/1080.jpg", contentType)
 	if err != nil {
 		return err
 	}
+	var out bytes.Buffer
+	// Save 720 version
+	err = ResizeImage(bytesReader, &out, VideoSizes["720p"])
+	if err != nil {
+		return err
+	}
+	completeRequest(&out, contentType, destinationRoot+"/720.jpg")
+	// Save 200 version
+	out.Reset()
+	bytesReader.Seek(0, 0)
+	err = ResizeImage(bytesReader, &out, Dimension{200, 200})
+	if err != nil {
+		return err
+	}
+	completeRequest(&out, contentType, destinationRoot+"/200.jpg")
 
-	completeRequest(&out, contentType, getCatalogueFilePath(fileKey)+"/600.png")
 	return nil
 }
 
 // ResizeImage resizes the provided image to a destination dimension
-func ResizeImage(input io.Reader, output io.Writer, d *Dimension) error {
+func ResizeImage(input io.Reader, output io.Writer, d Dimension) error {
 	width, height := strconv.Itoa(d.width), strconv.Itoa(d.height)
 	cmd := exec.Command("ffmpeg",
 		"-i", "pipe:0",

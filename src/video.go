@@ -429,6 +429,7 @@ func HandleAWSMedia(s3 events.S3Entity) error {
 	if err != nil {
 		return err
 	}
+	inputData = nil
 	duration := strconv.FormatFloat((rawDuration / 2), 'f', 4, 64)
 	destinationRoot := getMediaFilePath(fileKey)
 
