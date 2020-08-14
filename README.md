@@ -29,3 +29,7 @@ aws lambda add-permission --function-name vod-video-function --principal s3.amaz
 --source-arn arn:aws:s3:::findapp-media-vod-input \
 --source-account 406156568264
 ```
+
+
+
+ffmpeg -i ~/downloads/test_video_upload.mp4 -movflags frag_keyframe+empty_moov -vf scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2 output.mp4

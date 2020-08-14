@@ -21,18 +21,18 @@ const (
 
 var (
 	// VideoSizes stores common output sizes for videos which will be used to differentiate quality.
-	// The sizes assume the video aspect ratio is 16:9.
+	// The sizes assume the video aspect ratio is 9:16.
 	// Input streams will be adjusted to match close to these values.
 	//
 	// Source for formats is: https://support.google.com/youtube/answer/6375112?co=GENIE.Platform%3DDesktop&hl=en
 	VideoSizes map[string]Dimension = map[string]Dimension{
-		"2160p": {3840, 2160},
-		"1440p": {2560, 1440},
-		"1080p": {1920, 1080},
-		"720p":  {1280, 720},
-		"480p":  {854, 480},
-		"360p":  {640, 360},
-		"240p":  {426, 240},
+		"2160p": {2160, 3840},
+		"1440p": {1440, 2560},
+		"1080p": {1080, 1920},
+		"720p":  {720, 1280},
+		"480p":  {480, 854},
+		"360p":  {360, 640},
+		"240p":  {240, 426},
 	}
 
 	// VideoArray is an ordered list of display sizes supported
@@ -80,7 +80,7 @@ func IsVideo(data []byte) (bool, string) {
 	detectedType := http.DetectContentType(data)
 	if strings.EqualFold(detectedType, "application/octet-stream") {
 		// If the type is undetecteable, return false
-		return false, detectedType
+		return false, "video/mp4"
 	} else if strings.HasPrefix(detectedType, "video") {
 		return true, detectedType
 	} else {
