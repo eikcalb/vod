@@ -14,7 +14,7 @@
         "inputBucketName": "find-app-media-vod-input",
         "outputBucketName": "find-app-media-vod-output",
         "cataloguePrefix": "catalogue/",
-        "mediaPrefix":"media/",
+        "mediaPrefix": "media/",
         "region": "us-east-1"
     }
 }

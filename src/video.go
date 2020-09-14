@@ -440,21 +440,25 @@ func HandleAWSMedia(s3 events.S3Entity) error {
 	}
 
 	// For each output, create a buffer and save the converted data.
-	var output720 bytes.Buffer
+	//var output720 bytes.Buffer
 	var outputThumb bytes.Buffer
 
+	// TEMPORARILY STOP CONVERSION TO REDUCE LATENCY
 	// Generate resized video for 720p --- START
-	err = startVideoProcessWithFile(*tempFile, &output720, VideoSizes["720p"])
-	if err != nil {
-		return err
-	}
-	err = completeRequest(&output720, contentType, destinationRoot+"/720.mp4")
-	if err != nil {
-		return err
-	}
+	/*
+		err = startVideoProcessWithFile(*tempFile, &output720, VideoSizes["720p"])
+		if err != nil {
+			return err
+		}
+		err = completeRequest(&output720, contentType, destinationRoot+"/720.mp4")
+		if err != nil {
+			return err
+		}
+	*/
 	// 720p --- END
 
-	// Generate thumbnails 1080 --- START
+	// Generate thumbnails
+	// 1080 --- START
 	err = generateThumbnailWithFile(*tempFile, &outputThumb, duration, VideoSizes["1080p"])
 	if err != nil {
 		return err
@@ -478,19 +482,6 @@ func HandleAWSMedia(s3 events.S3Entity) error {
 		return err
 	}
 	// 720 --- END
-
-	// 200 --- START
-	// Reuse buffer
-	outputThumb.Reset()
-	err = generateThumbnailWithFile(*tempFile, &outputThumb, duration, Dimension{200, 200})
-	if err != nil {
-		return err
-	}
-	err = completeRequest(&outputThumb, imageType, destinationRoot+"/200.jpg")
-	if err != nil {
-		return err
-	}
-	// 200 --- END
 
 	return nil
 }
